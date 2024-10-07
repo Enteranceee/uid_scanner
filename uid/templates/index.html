@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network CCTV Scanner</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        h1 {
+            color: #5d5c61;
+            margin-top: 50px;
+        }
+        .scanner-container {
+            margin: 20px auto;
+            max-width: 800px;
+            background-color: #ffffff;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #results {
+            margin-top: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 12px;
+            text-align: center;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        #output {
+            max-height: 300px;
+            overflow-y: scroll;
+            background-color: #f4f4f9;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        #save-button {
+            margin-top: 20px;
+            background-color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <h1>CCTV Scanner</h1>
+    <div class="scanner-container">
+        <p>Enter the IP range to scan for CCTV devices:</p>
+        <input type="text" id="ip-range" value="0.0.0.0/0">
+        <button onclick="startScan()">Start Scan</button>
+        
+        <div id="output">
+            <h2>Scan Results:</h2>
+            <div id="results"></div>
+        </div>
+
+        <button id="save-button" onclick="saveResults()">Save Results</button>
+    </div>
+
+    <script>
+        function startScan() {
+            const ipRange = document.getElementById('ip-range').value;
+            document.getElementById('results').innerHTML = 'Scanning...';
+
+            fetch('/scan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ip_range: ipRange }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                let output = '<table><tr><th>IP Address</th><th>Status</th><th>UID</th></tr>';
+                data.forEach(device => {
+                    output += `<tr><td>${device.ip}</td><td>${device.state}</td><td>${device.uid}</td></tr>`;
+                });
+                output += '</table>';
+                document.getElementById('results').innerHTML = output;
+            });
+        }
+
+        function saveResults() {
+            const resultsTable = document.getElementById('results').innerText;
+            if (!resultsTable) {
+                alert('No scan results to save.');
+                return;
+            }
+
+            const rows = [];
+            document.querySelectorAll('#results tr').forEach(row => {
+                const columns = Array.from(row.querySelectorAll('td')).map(td => td.innerText);
+                if (columns.length) {
+                    rows.push({
+                        ip: columns[0],
+                        state: columns[1],
+                        uid: columns[2],
+                    });
+                }
+            });
+
+            fetch('/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(rows),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Results saved successfully.');
+                } else {
+                    alert('Failed to save results.');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
